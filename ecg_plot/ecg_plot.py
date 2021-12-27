@@ -88,12 +88,13 @@ def plot(
         title          = 'ECG 12', 
         lead_index     = lead_index, 
         lead_order     = None,
+        rhythm_lead    = 'II',
         style          = None,
         columns        = 2,
         row_height     = 6,
         show_lead_name = True,
         show_grid      = True,
-        show_separate_line  = True,
+        show_separate_line  = False,
         ):
     """Plot multi lead ECG chart.
     # Arguments
@@ -115,11 +116,11 @@ def plot(
         lead_order = list(range(0,len(ecg)))
     secs  = len(ecg[0])/sample_rate
     leads = len(lead_order)
-    rows  = int(ceil(leads/columns))
+    rows  = int(ceil(leads/columns)) + 1 # extra row for the rhythm strip
     # display_factor = 2.5
     display_factor = 1
     line_width = 0.5
-    fig, ax = plt.subplots(figsize=(secs*columns * display_factor, rows * row_height / 5 * display_factor))
+    fig, ax = plt.subplots(figsize=(secs/4*columns * display_factor, rows * row_height / 5 * display_factor))
     display_factor = display_factor ** 0.5
     fig.subplots_adjust(
         hspace = 0, 
@@ -133,7 +134,7 @@ def plot(
     fig.suptitle(title)
 
     x_min = 0
-    x_max = columns*secs
+    x_max = columns*secs/4
     y_min = row_height/4 - (rows/2)*row_height
     y_max = row_height/4
 
@@ -161,31 +162,45 @@ def plot(
     ax.set_xlim(x_min,x_max)
 
 
-    for c in range(0, columns):
-        for i in range(0, rows):
-            if (c * rows + i < leads):
-                y_offset = -(row_height/2) * ceil(i%rows)
+    for c in range(0, columns): #plot 12 leads
+        for i in range(0, rows-1):
+            if (c * (rows-1) + i < leads):
+                y_offset = -(row_height/2) * ceil(i%(rows-1))
                 # if (y_offset < -5):
                 #     y_offset = y_offset + 0.25
 
                 x_offset = 0
                 if(c > 0):
-                    x_offset = secs * c
+                    x_offset = secs/4 * c
                     if(show_separate_line):
                         ax.plot([x_offset, x_offset], [ecg[t_lead][0] + y_offset - 0.3, ecg[t_lead][0] + y_offset + 0.3], linewidth=line_width * display_factor, color=color_line)
 
          
-                t_lead = lead_order[c * rows + i]
+                t_lead = lead_order[c * (rows-1) + i]
          
                 step = 1.0/sample_rate
                 if(show_lead_name):
                     ax.text(x_offset + 0.07, y_offset - 0.5, lead_index[t_lead], fontsize=9 * display_factor)
                 ax.plot(
-                    np.arange(0, len(ecg[t_lead])*step, step) + x_offset, 
-                    ecg[t_lead] + y_offset,
+                    np.arange(0, len(ecg[t_lead])*step/4, step) + x_offset, 
+                    ecg[t_lead][len(ecg[t_lead])*3/4:] + y_offset,
                     linewidth=line_width * display_factor, 
                     color=color_line
                     )
+
+    y_offset = -(row_height/2) * (rows-1)
+    x_offset = 0
+    t_lead = lead_index.index(rhythm_lead)
+
+    if(show_lead_name):
+        ax.text(x_offset + 0.07, y_offset - 0.5, rhythm_lead, fontsize=11 * display_factor)
+    ax.plot(
+        np.arange(0, len(ecg[t_lead])*step, step) + x_offset, 
+        ecg[t_lead] + y_offset,
+        linewidth=line_width * display_factor, 
+        color=color_line
+        )
+
         
 
 def plot_1(ecg, sample_rate=500, title = 'ECG', fig_width = 15, fig_height = 2, line_w = 0.5, ecg_amp = 1.8, timetick = 0.2):
